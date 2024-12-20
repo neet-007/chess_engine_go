@@ -1,9 +1,11 @@
 package engine
 
-import "fmt"
+import (
+	"github.com/neet-007/chess_engine_go/pkg/shared"
+)
 
 func Engine() (chan string, chan string) {
-	fmt.Println("from engine")
+	shared.Tell("from engine")
 	frEng := make(chan string)
 	toEng := make(chan string)
 
