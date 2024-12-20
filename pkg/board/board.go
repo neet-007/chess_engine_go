@@ -38,7 +38,7 @@ func GetDefaultBoard() [][]byte {
 	return copyBoard
 }
 
-var CharsToPos = map[string]byte{
+var CharsToPosInitail = map[string]byte{
 	"a1": 'R', "b1": 'N', "c1": 'B', "d1": 'Q', "e1": 'K', "f1": 'B', "g1": 'N', "h1": 'R',
 	"a2": 'P', "b2": 'P', "c2": 'P', "d2": 'P', "e2": 'P', "f2": 'P', "g2": 'P', "h2": 'P',
 	"a3": '.', "b3": '.', "c3": '.', "d3": '.', "e3": '.', "f3": '.', "g3": '.', "h3": '.',
@@ -56,58 +56,104 @@ func NewBoardFromInitial(initBoard [][]byte) Board {
 
 	board := Board{}
 	for i := 0; i < 64; i++ {
-		var bi Bitboard = 1 << i
-		switch initBoard[i/8][i%8] {
+		rank := 7 - (i / 8)
+		file := 7 - (i % 8)
+		squareIndex := 8*rank + file
+		var bi Bitboard = 1 << squareIndex
+		switch initBoard[rank][file] {
 		case 'r':
 			{
-				board.BlackRooks += bi
+				board.BlackRooks |= bi
 			}
 		case 'n':
 			{
-				board.BlackKnights += bi
+				board.BlackKnights |= bi
 			}
 		case 'b':
 			{
-				board.BlackBishops += bi
+				board.BlackBishops |= bi
 			}
 		case 'q':
 			{
-				board.BlackQueens += bi
+				board.BlackQueens |= bi
 			}
 		case 'k':
 			{
-				board.BlackKing += bi
+				board.BlackKing |= bi
 			}
 		case 'p':
 			{
-				board.BlackPawns += bi
+				board.BlackPawns |= bi
 			}
 		case 'R':
 			{
-				board.WhiteRooks += bi
+				board.WhiteRooks |= bi
 			}
 		case 'N':
 			{
-				board.WhiteKnights += bi
+				board.WhiteKnights |= bi
 			}
 		case 'B':
 			{
-				board.WhiteBishops += bi
+				board.WhiteBishops |= bi
 			}
 		case 'Q':
 			{
-				board.WhiteQueens += bi
+				board.WhiteQueens |= bi
 			}
 		case 'K':
 			{
-				board.WhiteKing += bi
+				board.WhiteKing |= bi
 			}
 		case 'P':
 			{
-				board.WhitePawns += bi
+				board.WhitePawns |= bi
 			}
 		}
 	}
+	return board
+}
+
+func NewBoardFromInitialLERF(initBoard [][]byte) Board {
+	if len(initBoard) != 8 || len(initBoard[0]) != 8 {
+		panic("invalid board")
+	}
+
+	board := Board{}
+	for i := 0; i < 64; i++ {
+		rank := 7 - (i / 8) // Flip the rank
+		file := 7 - (i % 8) // Flip the file
+		squareIndex := 8*rank + file
+		var bi Bitboard = 1 << squareIndex
+
+		switch initBoard[rank][file] {
+		case 'r':
+			board.BlackRooks |= bi
+		case 'n':
+			board.BlackKnights |= bi
+		case 'b':
+			board.BlackBishops |= bi
+		case 'q':
+			board.BlackQueens |= bi
+		case 'k':
+			board.BlackKing |= bi
+		case 'p':
+			board.BlackPawns |= bi
+		case 'R':
+			board.WhiteRooks |= bi
+		case 'N':
+			board.WhiteKnights |= bi
+		case 'B':
+			board.WhiteBishops |= bi
+		case 'Q':
+			board.WhiteQueens |= bi
+		case 'K':
+			board.WhiteKing |= bi
+		case 'P':
+			board.WhitePawns |= bi
+		}
+	}
+
 	return board
 }
 
