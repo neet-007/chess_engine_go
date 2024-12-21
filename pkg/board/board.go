@@ -2,7 +2,7 @@ package board
 
 import "fmt"
 
-type Board struct {
+type Board_ struct {
 	WhitePawns   Bitboard
 	WhiteKnights Bitboard
 	WhiteBishops Bitboard
@@ -16,6 +16,84 @@ type Board struct {
 	BlackRooks   Bitboard
 	BlackQueens  Bitboard
 	BlackKing    Bitboard
+}
+
+type Castling uint
+
+type Color int
+
+const (
+	NP12     = 12
+	NP       = 6
+	WHITE    = Color(0)
+	BLACK    = Color(1)
+	StartPos = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"
+)
+
+const (
+	Pawn int = iota
+	Knight
+	Bishop
+	Rook
+	Queen
+	King
+)
+
+const (
+	WP = iota
+	BP
+	WN
+	BN
+	WB
+	BB
+	WR
+	BR
+	WQ
+	BQ
+	WK
+	BK
+	Empty = 15
+)
+
+type Board struct {
+	Sq       [64]int
+	Count    [12]int
+	PiecesBB [6]Bitboard
+	WBBB     [2]Bitboard
+	King     [2]int
+
+	Ep int
+	Castling
+	Smt Color
+}
+
+func (b *Board) AllBB() Bitboard {
+	return b.WBBB[0] | b.WBBB[1]
+}
+
+func (b *Board) Clear() {
+	b.Smt = WHITE
+	b.Castling = 0
+	b.Ep = 0
+	b.WBBB[0], b.WBBB[1] = 0, 0
+
+	for i := 0; i < NP; i++ {
+		b.PiecesBB[i] = 0
+	}
+
+	for i := A1; i < H8; i++ {
+		b.Sq[i] = Empty
+	}
+
+	for i := 0; i < NP12; i++ {
+		b.Count[i] = 0
+	}
+
+}
+
+func (b *Board) NewGame() {
+	b.Clear()
+	//parseFEN(StartPos)
 }
 
 var defaultBoard = [][]byte{
@@ -49,12 +127,12 @@ var CharsToPosInitail = map[string]byte{
 	"a8": 'r', "b8": 'n', "c8": 'b', "d8": 'q', "e8": 'k', "f8": 'b', "g8": 'n', "h8": 'r',
 }
 
-func NewBoardFromInitial(initBoard [][]byte) Board {
+func NewBoardFromInitial(initBoard [][]byte) Board_ {
 	if len(initBoard) != 8 || len(initBoard[0]) != 8 {
 		panic("invalid board")
 	}
 
-	board := Board{}
+	board := Board_{}
 	for i := 0; i < 64; i++ {
 		rank := 7 - (i / 8)
 		file := 7 - (i % 8)
@@ -114,12 +192,12 @@ func NewBoardFromInitial(initBoard [][]byte) Board {
 	return board
 }
 
-func NewBoardFromInitialLERF(initBoard [][]byte) Board {
+func NewBoardFromInitialLERF(initBoard [][]byte) Board_ {
 	if len(initBoard) != 8 || len(initBoard[0]) != 8 {
 		panic("invalid board")
 	}
 
-	board := Board{}
+	board := Board_{}
 	for i := 0; i < 64; i++ {
 		rank := 7 - (i / 8) // Flip the rank
 		file := 7 - (i % 8) // Flip the file
@@ -157,7 +235,7 @@ func NewBoardFromInitialLERF(initBoard [][]byte) Board {
 	return board
 }
 
-func (b Board) BitBoardBoardToByte() [][]byte {
+func (b Board_) BitBoardBoardToByte() [][]byte {
 	ret := make([][]byte, 8)
 	for i := range 8 {
 		ret[i] = make([]byte, 8)
@@ -204,7 +282,7 @@ func (b Board) BitBoardBoardToByte() [][]byte {
 	return ret
 }
 
-func (b Board) PrintBoardBitBoards() {
+func (b Board_) PrintBoardBitBoards() {
 	fmt.Printf("br %064b\n", b.BlackRooks)
 	fmt.Printf("bn %064b\n", b.BlackKnights)
 	fmt.Printf("bb %064b\n", b.BlackBishops)
