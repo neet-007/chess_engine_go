@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/neet-007/chess_engine_go/pkg/engine"
@@ -60,7 +61,7 @@ func Uci(frGUI chan string, tell func(text ...string)) {
 			}
 		case "position":
 			{
-				handlePosition(words)
+				handlePosition(cmd)
 			}
 		case "debug":
 			{
@@ -119,31 +120,47 @@ func handleBestMove(bestMove string, biInfinite *bool) {
 func handleUciNewGame() {
 	shared.Tell("ucinewgame not implemented")
 }
-func handlePosition(words []string) {
-	if len(words) > 1 {
-		words[1] = formatCmd(words[1])
-		switch words[1] {
-		case "startpos":
-			{
-				shared.Tell("position startpos not implemented")
-			}
-		case "fen":
-			{
-				shared.Tell("position fen not implemented")
-			}
-		default:
-			{
-				shared.Tell("position " + words[1] + " not implemmented")
-			}
-		}
+
+func handlePosition(cmd string) {
+	cmd = strings.TrimSpace(strings.TrimPrefix(cmd, "position"))
+	parts := strings.Split(cmd, "moves")
+	if len(parts) == 0 || len(parts) > 2 {
+		err := fmt.Errorf("%v wrong length=%v", parts, len(parts))
+		shared.Tell("position error ", err.Error())
+		return
+	}
+
+	alt := strings.Split(parts[0], " ")
+
+	alt[0] = strings.TrimSpace(alt[0])
+	if alt[0] == "startpos" {
+		alt[0] = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+	} else if alt[0] == "fen" {
+		alt[0] = ""
+	} else {
+		err := fmt.Errorf("%#v must be %#v or %#v", alt[0], "startpos", "fen")
+		shared.Tell("position error ", err.Error())
+		return
+	}
+
+	parts[0] = strings.TrimSpace(strings.Join(alt, " "))
+
+	parseFEN(parts[0])
+
+	if len(parts) == 2 {
+		parts[1] = formatCmd(parts[1])
+		parseMvs(parts[1])
 	}
 }
+
 func handleDebug(words []string) {
 	shared.Tell("debug " + strings.Join(words, " ") + " not implemented")
 }
+
 func handleRegister(words []string) {
 	shared.Tell("register " + strings.Join(words, " ") + " not implemented")
 }
+
 func handleGo(words []string) {
 	if len(words) > 1 {
 		words[1] = formatCmd(words[1])
@@ -205,6 +222,7 @@ func handleGo(words []string) {
 		shared.Tell("go string not implemnted")
 	}
 }
+
 func handlePonderHit() {
 	shared.Tell("ponder not implemented")
 }
@@ -222,6 +240,38 @@ func handleStop(toEng chan string, biInfinite *bool) {
 
 func handleQuit(toEng chan string) {
 	toEng <- "stop"
+}
+
+func parseFEN(fen string) {
+	fenIx := 0
+
+	for row := 7; row >= 0; row-- {
+		for sq := row * 8; sq < row*8+8; {
+
+			char := string(fen[fenIx])
+			fenIx++
+
+			if char == "/" {
+				continue
+			}
+
+			if i, err := strconv.Atoi(char); err == nil {
+				fmt.Println(i, "empty from sq", sq)
+				sq += i
+				continue
+			}
+			fmt.Println(char, " at sq ", sq)
+			sq++
+		}
+	}
+}
+
+func parseMvs(moves string) {
+	movesList := strings.Split(moves, " ")
+
+	for _, move := range movesList {
+		fmt.Println("make move ", move)
+	}
 }
 
 func MainTell(text ...string) {
