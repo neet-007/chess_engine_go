@@ -82,7 +82,7 @@ func (b *Board) Clear() {
 
 func (b *Board) NewGame() {
 	b.Clear()
-	//parseFEN(StartPos)
+	ParseFEN(StartPos)
 }
 
 func (b *Board) SetSq(p12, s int) {
@@ -131,6 +131,7 @@ func ParseFEN(fen string) {
 			}
 			fmt.Println(char, " at sq ", sq)
 
+			// TODO: set the square on the board
 			//b.SetSq(Fen2Sq[char], sq)
 
 			sq++

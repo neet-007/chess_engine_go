@@ -14,7 +14,7 @@ func (b *Bitboard) Set(pos uint) {
 	*b |= Bitboard(uint64(1) << pos)
 }
 
-func (b Bitboard) IsZero(pos uint) bool {
+func (b Bitboard) IsNotZero(pos uint) bool {
 	return (b & Bitboard(uint64(1)<<pos)) != 0
 }
 

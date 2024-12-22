@@ -32,7 +32,7 @@ func ParseCastlings(fenCast string) Castlings {
 		c |= ShortB
 	}
 
-	if strings.Contains(fenCast, "Q") {
+	if strings.Contains(fenCast, "q") {
 		c |= LongB
 	}
 
