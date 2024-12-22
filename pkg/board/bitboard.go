@@ -1,16 +1,43 @@
 package board
 
+import (
+	"math/bits"
+)
+
 type Bitboard uint64
+
+func (b Bitboard) Count() int {
+	return bits.OnesCount64(uint64(b))
+}
+
+func (b *Bitboard) Set(pos uint) {
+	*b |= Bitboard(uint64(1) << pos)
+}
+
+func (b Bitboard) IsZero(pos uint) bool {
+	return (b & Bitboard(uint64(1)<<pos)) != 0
+}
+
+func (b *Bitboard) Clr(pos uint) {
+	*b &= Bitboard(^uint64(1) << pos)
+}
+
+func (b *Bitboard) FirstOne() int {
+	bit := bits.TrailingZeros64(uint64(*b))
+
+	if bit == 64 {
+		return bit
+	}
+
+	*b = (*b >> uint(bit+1)) << uint(bit+1)
+	return bit
+}
 
 /*
 	squareIndex = 8*rankIndex + fileIndex
 	FileIndex   = squareIndex modulo 8  = squareIndex & 7
 	RankIndex   = squareIndex div    8  = squareIndex >> 3
 */
-
-func NewBitboard() Bitboard {
-	return 0
-}
 
 // Bitboard Constants for Files, Ranks, and Patterns
 const (
@@ -22,7 +49,7 @@ const (
 
 // Little endian rank-file (LERF)
 const (
-	A1 Bitboard = iota
+	A1 int = iota
 	B1
 	C1
 	D1

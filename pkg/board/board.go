@@ -1,24 +1,13 @@
 package board
 
-import "fmt"
+import (
+	"fmt"
+	"strconv"
+	"strings"
 
-type Board_ struct {
-	WhitePawns   Bitboard
-	WhiteKnights Bitboard
-	WhiteBishops Bitboard
-	WhiteRooks   Bitboard
-	WhiteQueens  Bitboard
-	WhiteKing    Bitboard
-
-	BlackPawns   Bitboard
-	BlackKnights Bitboard
-	BlackBishops Bitboard
-	BlackRooks   Bitboard
-	BlackQueens  Bitboard
-	BlackKing    Bitboard
-}
-
-type Castling uint
+	"github.com/neet-007/chess_engine_go/pkg/castlings"
+	"github.com/neet-007/chess_engine_go/pkg/shared"
+)
 
 type Color int
 
@@ -63,7 +52,7 @@ type Board struct {
 	King     [2]int
 
 	Ep int
-	Castling
+	castlings.Castlings
 	Smt Color
 }
 
@@ -73,7 +62,7 @@ func (b *Board) AllBB() Bitboard {
 
 func (b *Board) Clear() {
 	b.Smt = WHITE
-	b.Castling = 0
+	b.Castlings = 0
 	b.Ep = 0
 	b.WBBB[0], b.WBBB[1] = 0, 0
 
@@ -96,203 +85,115 @@ func (b *Board) NewGame() {
 	//parseFEN(StartPos)
 }
 
-var defaultBoard = [][]byte{
-	{'r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'},
-	{'p', 'p', 'p', 'p', 'p', 'p', 'p', 'p'},
-	{'.', '.', '.', '.', '.', '.', '.', '.'},
-	{'.', '.', '.', '.', '.', '.', '.', '.'},
-	{'.', '.', '.', '.', '.', '.', '.', '.'},
-	{'.', '.', '.', '.', '.', '.', '.', '.'},
-	{'P', 'P', 'P', 'P', 'P', 'P', 'P', 'P'},
-	{'R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R'},
+func (b *Board) SetSq(p12, s int) {
+	b.Sq[s] = p12
+
+	if p12 == Empty {
+		b.WBBB[WHITE].Clr(uint(s))
+		b.WBBB[BLACK].Clr(uint(s))
+
+		for p := 0; p < NP; p++ {
+			b.PiecesBB[p].Clr(uint(s))
+		}
+
+		return
+	}
+
+	p := piece(p12)
+	sd := p12Color(p12)
+
+	if p12 == King {
+		b.King[p] = s
+	}
+
+	b.WBBB[sd].Set(uint(s))
+	b.PiecesBB[p].Set(uint(s))
 }
 
-func GetDefaultBoard() [][]byte {
-	copyBoard := make([][]byte, len(defaultBoard))
-	for i := range defaultBoard {
-		copyBoard[i] = make([]byte, len(defaultBoard[i]))
-		copy(copyBoard[i], defaultBoard[i])
+func ParseFEN(fen string) {
+	fenIx := 0
+	sq := 0
+
+	for row := 7; row >= 0; row-- {
+		for sq = row * 8; sq < row*8+8; {
+
+			char := string(fen[fenIx])
+			fenIx++
+
+			if char == "/" {
+				continue
+			}
+
+			if i, err := strconv.Atoi(char); err == nil {
+				fmt.Println(i, "empty from sq", sq)
+				sq += i
+				continue
+			}
+			fmt.Println(char, " at sq ", sq)
+
+			//b.SetSq(Fen2Sq[char], sq)
+
+			sq++
+		}
 	}
-	return copyBoard
+
+	remaining := strings.Split(strings.TrimSpace(fen[fenIx:]), " ")
+
+	if len(remaining) > 0 {
+		if remaining[0] == "w" {
+			// TODO: make to move white
+		} else if remaining[0] == "b" {
+			// TODO: make to move black
+		} else {
+			r := fmt.Sprintf("%s sq=%d fenIx=%d\n", strings.Join(remaining, " "), sq, fenIx)
+
+			shared.Tell("parse fen remaingin ", r, "\n")
+			shared.Tell("parse fen ", remaining[0], "invalid smt")
+			// TODO: reset to move to white
+		}
+
+	}
+
+	// TODO: reset board castlings
+	if len(remaining) > 1 {
+		_ = castlings.ParseCastlings(remaining[1])
+	}
+
+	// TODO: reset es passent
+	if len(remaining) > 2 {
+		if remaining[2] != "-" {
+			// TODO: set es passent on board
+			_ = Fen2Sq[remaining[2]]
+		}
+	}
+
+	// TODO: reset the 50 rule
+	if len(remaining) > 3 {
+		_ = parse50(remaining[3])
+	}
 }
 
-var CharsToPosInitail = map[string]byte{
-	"a1": 'R', "b1": 'N', "c1": 'B', "d1": 'Q', "e1": 'K', "f1": 'B', "g1": 'N', "h1": 'R',
-	"a2": 'P', "b2": 'P', "c2": 'P', "d2": 'P', "e2": 'P', "f2": 'P', "g2": 'P', "h2": 'P',
-	"a3": '.', "b3": '.', "c3": '.', "d3": '.', "e3": '.', "f3": '.', "g3": '.', "h3": '.',
-	"a4": '.', "b4": '.', "c4": '.', "d4": '.', "e4": '.', "f4": '.', "g4": '.', "h4": '.',
-	"a5": '.', "b5": '.', "c5": '.', "d5": '.', "e5": '.', "f5": '.', "g5": '.', "h5": '.',
-	"a6": '.', "b6": '.', "c6": '.', "d6": '.', "e6": '.', "f6": '.', "g6": '.', "h6": '.',
-	"a7": 'p', "b7": 'p', "c7": 'p', "d7": 'p', "e7": 'p', "f7": 'p', "g7": 'p', "h7": 'p',
-	"a8": 'r', "b8": 'n', "c8": 'b', "d8": 'q', "e8": 'k', "f8": 'b', "g8": 'n', "h8": 'r',
+func parse50(fen50 string) int {
+	r50, err := strconv.Atoi(fen50)
+	if err != nil || r50 < 0 {
+		shared.Tell("parse 50 50 move rule in fenstring ", fen50, " is not a valid number >= 0 ")
+		return 0
+	}
+	return r50
 }
 
-func NewBoardFromInitial(initBoard [][]byte) Board_ {
-	if len(initBoard) != 8 || len(initBoard[0]) != 8 {
-		panic("invalid board")
-	}
+func ParseMvs(moves string) {
+	movesList := strings.Split(moves, " ")
 
-	board := Board_{}
-	for i := 0; i < 64; i++ {
-		rank := 7 - (i / 8)
-		file := 7 - (i % 8)
-		squareIndex := 8*rank + file
-		var bi Bitboard = 1 << squareIndex
-		switch initBoard[rank][file] {
-		case 'r':
-			{
-				board.BlackRooks |= bi
-			}
-		case 'n':
-			{
-				board.BlackKnights |= bi
-			}
-		case 'b':
-			{
-				board.BlackBishops |= bi
-			}
-		case 'q':
-			{
-				board.BlackQueens |= bi
-			}
-		case 'k':
-			{
-				board.BlackKing |= bi
-			}
-		case 'p':
-			{
-				board.BlackPawns |= bi
-			}
-		case 'R':
-			{
-				board.WhiteRooks |= bi
-			}
-		case 'N':
-			{
-				board.WhiteKnights |= bi
-			}
-		case 'B':
-			{
-				board.WhiteBishops |= bi
-			}
-		case 'Q':
-			{
-				board.WhiteQueens |= bi
-			}
-		case 'K':
-			{
-				board.WhiteKing |= bi
-			}
-		case 'P':
-			{
-				board.WhitePawns |= bi
-			}
-		}
+	for _, move := range movesList {
+		fmt.Println("make move ", move)
 	}
-	return board
 }
 
-func NewBoardFromInitialLERF(initBoard [][]byte) Board_ {
-	if len(initBoard) != 8 || len(initBoard[0]) != 8 {
-		panic("invalid board")
-	}
-
-	board := Board_{}
-	for i := 0; i < 64; i++ {
-		rank := 7 - (i / 8) // Flip the rank
-		file := 7 - (i % 8) // Flip the file
-		squareIndex := 8*rank + file
-		var bi Bitboard = 1 << squareIndex
-
-		switch initBoard[rank][file] {
-		case 'r':
-			board.BlackRooks |= bi
-		case 'n':
-			board.BlackKnights |= bi
-		case 'b':
-			board.BlackBishops |= bi
-		case 'q':
-			board.BlackQueens |= bi
-		case 'k':
-			board.BlackKing |= bi
-		case 'p':
-			board.BlackPawns |= bi
-		case 'R':
-			board.WhiteRooks |= bi
-		case 'N':
-			board.WhiteKnights |= bi
-		case 'B':
-			board.WhiteBishops |= bi
-		case 'Q':
-			board.WhiteQueens |= bi
-		case 'K':
-			board.WhiteKing |= bi
-		case 'P':
-			board.WhitePawns |= bi
-		}
-	}
-
-	return board
+func piece(p12 int) int {
+	return p12 >> 1
 }
 
-func (b Board_) BitBoardBoardToByte() [][]byte {
-	ret := make([][]byte, 8)
-	for i := range 8 {
-		ret[i] = make([]byte, 8)
-	}
-	for i := 0; i < 64; i++ {
-		ret[i/8][i%8] = '.'
-		if (b.BlackRooks>>i)&1 == 1 {
-			ret[i/8][i%8] = 'r'
-		}
-		if (b.BlackKnights>>i)&1 == 1 {
-			ret[i/8][i%8] = 'n'
-		}
-		if (b.BlackBishops>>i)&1 == 1 {
-			ret[i/8][i%8] = 'b'
-		}
-		if (b.BlackQueens>>i)&1 == 1 {
-			ret[i/8][i%8] = 'q'
-		}
-		if (b.BlackKing>>i)&1 == 1 {
-			ret[i/8][i%8] = 'k'
-		}
-		if (b.BlackPawns>>i)&1 == 1 {
-			ret[i/8][i%8] = 'p'
-		}
-		if (b.WhiteRooks>>i)&1 == 1 {
-			ret[i/8][i%8] = 'R'
-		}
-		if (b.WhiteKnights>>i)&1 == 1 {
-			ret[i/8][i%8] = 'N'
-		}
-		if (b.WhiteBishops>>i)&1 == 1 {
-			ret[i/8][i%8] = 'B'
-		}
-		if (b.WhiteQueens>>i)&1 == 1 {
-			ret[i/8][i%8] = 'Q'
-		}
-		if (b.WhiteKing>>i)&1 == 1 {
-			ret[i/8][i%8] = 'K'
-		}
-		if (b.WhitePawns>>i)&1 == 1 {
-			ret[i/8][i%8] = 'P'
-		}
-	}
-	return ret
-}
-
-func (b Board_) PrintBoardBitBoards() {
-	fmt.Printf("br %064b\n", b.BlackRooks)
-	fmt.Printf("bn %064b\n", b.BlackKnights)
-	fmt.Printf("bb %064b\n", b.BlackBishops)
-	fmt.Printf("bq %064b\n", b.BlackQueens)
-	fmt.Printf("bk %064b\n", b.BlackKing)
-	fmt.Printf("bp %064b\n", b.BlackPawns)
-	fmt.Printf("wr %064b\n", b.WhiteRooks)
-	fmt.Printf("wn %064b\n", b.WhiteKnights)
-	fmt.Printf("wb %064b\n", b.WhiteBishops)
-	fmt.Printf("wq %064b\n", b.WhiteQueens)
-	fmt.Printf("wk %064b\n", b.WhiteKing)
-	fmt.Printf("wp %064b\n", b.WhitePawns)
+func p12Color(p12 int) Color {
+	return Color(p12 & 0x1)
 }
