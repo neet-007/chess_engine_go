@@ -1,10 +1,7 @@
 package uci
 
 import (
-	"bufio"
 	"fmt"
-	"io"
-	"os"
 	"strings"
 
 	"github.com/neet-007/chess_engine_go/pkg/board"
@@ -12,8 +9,18 @@ import (
 	"github.com/neet-007/chess_engine_go/pkg/shared"
 )
 
-func InitTell() {
-	shared.Tell = MainTell
+type UCI struct {
+	Options map[string]string
+	Debug   bool
+}
+
+func initTell() {
+	shared.Tell = shared.MainTell
+}
+
+func NewUCI() *UCI {
+	initTell()
+	return &UCI{Debug: false}
 }
 
 var saveBm string = ""
@@ -22,7 +29,7 @@ func formatCmd(cmd string) string {
 	return strings.TrimSpace(strings.ToLower(cmd))
 }
 
-func Uci(frGUI chan string, tell func(text ...string)) {
+func (u *UCI) Main(frGUI chan string, tell func(text ...string)) {
 	tell("hello from uci")
 	frEng, toEng := engine.Engine()
 	var cmd string
@@ -36,7 +43,7 @@ func Uci(frGUI chan string, tell func(text ...string)) {
 			}
 		case bestMove = <-frEng:
 			{
-				handleBestMove(bestMove, &biInfinite)
+				u.handleBestMove(bestMove, &biInfinite)
 				continue
 			}
 		}
@@ -45,53 +52,53 @@ func Uci(frGUI chan string, tell func(text ...string)) {
 		switch words[0] {
 		case "uci":
 			{
-				handleUci()
+				u.handleUci()
 			}
 		case "setoption":
 			{
-				handleSetOption(words)
+				u.handleSetOption(words)
 			}
 		case "isready":
 			{
-				handleIsReady()
+				u.handleIsReady()
 			}
 		case "ucinewgame":
 			{
-				handleUciNewGame()
+				u.handleUciNewGame()
 			}
 		case "position":
 			{
-				handlePosition(cmd)
+				u.handlePosition(cmd)
 			}
 		case "debug":
 			{
-				handleDebug(words)
+				u.handleDebug(words)
 			}
 		case "register":
 			{
-				handleRegister(words)
+				u.handleRegister(words)
 			}
 		case "go":
 			{
-				handleGo(words)
+				u.handleGo(words)
 			}
 		case "ponderhit":
 			{
-				handlePonderHit()
+				u.handlePonderHit()
 			}
 		case "stop":
 			{
-				handleStop(toEng, &biInfinite)
+				u.handleStop(toEng, &biInfinite)
 			}
 		case "quit", "q":
-			handleQuit(toEng)
+			u.handleQuit(toEng)
 			quit = true
 			continue
 		}
 	}
 }
 
-func handleUci() {
+func (u *UCI) handleUci() {
 	shared.Tell("id name chessEngine")
 	shared.Tell("id auther moayed")
 
@@ -100,16 +107,16 @@ func handleUci() {
 	shared.Tell("uciok")
 }
 
-func handleIsReady() {
+func (u *UCI) handleIsReady() {
 	shared.Tell("readyok")
 }
 
-func handleSetOption(option []string) {
+func (u *UCI) handleSetOption(option []string) {
 	shared.Tell("set option with option " + strings.Join(option, " "))
-	shared.Tell("not impleatned")
+	shared.Tell("info not impleatned")
 }
 
-func handleBestMove(bestMove string, biInfinite *bool) {
+func (u *UCI) handleBestMove(bestMove string, biInfinite *bool) {
 	if *biInfinite {
 		saveBm = bestMove
 		return
@@ -117,16 +124,16 @@ func handleBestMove(bestMove string, biInfinite *bool) {
 	shared.Tell(bestMove)
 }
 
-func handleUciNewGame() {
-	shared.Tell("ucinewgame not implemented")
+func (u *UCI) handleUciNewGame() {
+	shared.Tell("info ucinewgame not implemented")
 }
 
-func handlePosition(cmd string) {
+func (u *UCI) handlePosition(cmd string) {
 	cmd = strings.TrimSpace(strings.TrimPrefix(cmd, "position"))
 	parts := strings.Split(cmd, "moves")
 	if len(parts) == 0 || len(parts) > 2 {
 		err := fmt.Errorf("%v wrong length=%v", parts, len(parts))
-		shared.Tell("position error ", err.Error())
+		shared.Tell("info position error ", err.Error())
 		return
 	}
 
@@ -134,16 +141,14 @@ func handlePosition(cmd string) {
 
 	alt[0] = strings.TrimSpace(alt[0])
 	if alt[0] == "startpos" {
-		alt[0] = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+		parts[0] = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 	} else if alt[0] == "fen" {
-		alt[0] = ""
+		parts[0] = strings.TrimSpace(strings.TrimPrefix(parts[0], "fen"))
 	} else {
 		err := fmt.Errorf("%#v must be %#v or %#v", alt[0], "startpos", "fen")
-		shared.Tell("position error ", err.Error())
+		shared.Tell("info position error ", err.Error())
 		return
 	}
-
-	parts[0] = strings.TrimSpace(strings.Join(alt, " "))
 
 	board.ParseFEN(parts[0])
 
@@ -153,81 +158,81 @@ func handlePosition(cmd string) {
 	}
 }
 
-func handleDebug(words []string) {
-	shared.Tell("debug " + strings.Join(words, " ") + " not implemented")
+func (u *UCI) handleDebug(words []string) {
+	shared.Tell("info debug " + strings.Join(words, " ") + " not implemented")
 }
 
-func handleRegister(words []string) {
-	shared.Tell("register " + strings.Join(words, " ") + " not implemented")
+func (u *UCI) handleRegister(words []string) {
+	shared.Tell("info register " + strings.Join(words, " ") + " not implemented")
 }
 
-func handleGo(words []string) {
+func (u *UCI) handleGo(words []string) {
 	if len(words) > 1 {
 		words[1] = formatCmd(words[1])
 		switch words[1] {
 		case "searchmoves":
 			{
-				shared.Tell("go searchmoves not implemetned")
+				shared.Tell("info go searchmoves not implemetned")
 			}
 		case "ponder":
 			{
-				shared.Tell("go ponder not implemented")
+				shared.Tell("info go ponder not implemented")
 			}
 		case "wtime":
 			{
-				shared.Tell("go wtime not implemented")
+				shared.Tell("info go wtime not implemented")
 			}
 		case "btime":
 			{
-				shared.Tell("go btime not implemented")
+				shared.Tell("info go btime not implemented")
 			}
 		case "winc":
 			{
-				shared.Tell("go winc not impleanted")
+				shared.Tell("info go winc not impleanted")
 			}
 		case "binc":
 			{
-				shared.Tell("go binc not implemnetd")
+				shared.Tell("info go binc not implemnetd")
 			}
 		case "movestogo":
 			{
-				shared.Tell("go movestogo not implemented")
+				shared.Tell("info go movestogo not implemented")
 			}
 		case "depth":
 			{
-				shared.Tell("go depth not implemented")
+				shared.Tell("info go depth not implemented")
 			}
 		case "nodes":
 			{
-				shared.Tell("go nodes not implemented")
+				shared.Tell("info go nodes not implemented")
 			}
 		case "movetime":
 			{
-				shared.Tell("go movetime not implemented")
+				shared.Tell("info go movetime not implemented")
 			}
 		case "mate":
 			{
-				shared.Tell("go mate not implemented")
+				shared.Tell("info go mate not implemented")
 			}
 		case "infinite":
 			{
-				shared.Tell("go infinite not implemnetd")
+				shared.Tell("info go infinite not implemnetd")
 			}
 		default:
 			{
-				shared.Tell("go " + words[1] + "not implemenetd")
+				shared.Tell("info go " + words[1] + "not implemenetd")
 			}
 		}
 	} else {
-		shared.Tell("go string not implemnted")
+		shared.Tell("info go string not implemnted")
 	}
 }
 
-func handlePonderHit() {
-	shared.Tell("ponder not implemented")
+func (u *UCI) handlePonderHit() {
+	shared.Tell("info ponder not implemented")
 }
 
-func handleStop(toEng chan string, biInfinite *bool) {
+func (u *UCI) handleStop(toEng chan string, biInfinite *bool) {
 	if *biInfinite {
 		if saveBm != "" {
 			shared.Tell(saveBm)
@@ -238,34 +243,6 @@ func handleStop(toEng chan string, biInfinite *bool) {
 	}
 }
 
-func handleQuit(toEng chan string) {
+func (u *UCI) handleQuit(toEng chan string) {
 	toEng <- "stop"
-}
-
-func MainTell(text ...string) {
-	builder := strings.Builder{}
-
-	for _, t := range text {
-		builder.WriteString(t)
-	}
-
-	fmt.Println(builder.String())
-}
-
-func Input() chan string {
-	line := make(chan string)
-
-	go func() {
-		reader := bufio.NewReader(os.Stdin)
-		for {
-			text, err := reader.ReadString('\n')
-			text = strings.TrimSpace(text)
-
-			if err != io.EOF && len(text) > 0 {
-				line <- text
-			}
-		}
-	}()
-
-	return line
 }
