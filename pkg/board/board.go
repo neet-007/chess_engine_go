@@ -184,11 +184,46 @@ func parse50(fen50 string) int {
 }
 
 func ParseMvs(moves string) {
-	movesList := strings.Split(moves, " ")
+	movesList := strings.Fields(strings.ToLower(moves))
 
 	for _, move := range movesList {
-		fmt.Println("make move ", move)
+		move := strings.TrimSpace(move)
+
+		if len(move) != 4 && len(move) != 5 {
+			shared.Tell("parse move ", move, " move length must be 4 or 5")
+			return
+		}
+
+		_, ok := Fen2Sq[move[:2]]
+		if !ok {
+			shared.Tell("parse move ", move, " from square is invalid")
+			return
+		}
+
+		// TODO: get the piece on the board
+		//p12 := board.sq[fr]
+
+		// TODO: get the color of the piece
+		//pCol = p12Color(p12)
+
+		// TODO: check if the color is the one to move
+
+		_, ok = Fen2Sq[move[2:4]]
+		if !ok {
+			shared.Tell("parse move ", move, " to square is invalid")
+			return
+		}
+
+		promotion := 0
+		if len(move) == 5 {
+			if !strings.ContainsAny(move[4:5], "qnbr") {
+				shared.Tell("parse move ", move, " invalid promotion")
+				return
+			}
+		}
+		promotion = promotion
 	}
+	// TODO: make board move method
 }
 
 func piece(p12 int) int {
