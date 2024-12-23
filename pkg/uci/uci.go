@@ -14,12 +14,12 @@ type UCI struct {
 	Debug   bool
 }
 
-func initTell() {
-	shared.Tell = shared.MainTell
+func initTell(tell func(text ...string)) {
+	shared.Tell = tell
 }
 
-func NewUCI() *UCI {
-	initTell()
+func NewUCI(tell func(test ...string)) *UCI {
+	initTell(tell)
 	return &UCI{Debug: false}
 }
 
@@ -29,8 +29,7 @@ func formatCmd(cmd string) string {
 	return strings.TrimSpace(strings.ToLower(cmd))
 }
 
-func (u *UCI) Main(frGUI chan string, tell func(text ...string)) {
-	tell("hello from uci")
+func (u *UCI) Main(frGUI chan string) {
 	frEng, toEng := engine.Engine()
 	var cmd string
 	var bestMove string
@@ -100,7 +99,7 @@ func (u *UCI) Main(frGUI chan string, tell func(text ...string)) {
 
 func (u *UCI) handleUci() {
 	shared.Tell("id name chessEngine")
-	shared.Tell("id auther moayed")
+	shared.Tell("id author moayed")
 
 	shared.Tell("option name Hash type spin default 32 min 1 max 1024")
 	shared.Tell("option name Threads type spin default 1 min 1 max 16")

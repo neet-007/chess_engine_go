@@ -6,7 +6,6 @@ import (
 )
 
 func main() {
-	shared.Tell("hello from main")
-	uci_ := uci.NewUCI()
-	uci_.Main(shared.Input(), shared.MainTell)
+	uci_ := uci.NewUCI(shared.Tell)
+	uci_.Main(shared.Input())
 }
