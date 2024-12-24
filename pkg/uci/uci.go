@@ -93,6 +93,15 @@ func (u *UCI) Main(frGUI chan string) {
 			u.handleQuit(toEng)
 			quit = true
 			continue
+		// NOTE: custom commands not in protocl
+		case "pb":
+			{
+
+			}
+		case "pbb":
+			{
+
+			}
 		}
 	}
 }

@@ -1,11 +1,14 @@
 package main
 
 import (
+	"github.com/neet-007/chess_engine_go/pkg/board"
 	"github.com/neet-007/chess_engine_go/pkg/shared"
-	"github.com/neet-007/chess_engine_go/pkg/uci"
 )
 
 func main() {
-	uci_ := uci.NewUCI(shared.Tell)
-	uci_.Main(shared.Input())
+	b := board.Board{}
+	shared.Tell = shared.MainTell
+	b.NewGame()
+	b.Print()
+	b.PrintAllBB()
 }

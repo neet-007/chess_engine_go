@@ -46,3 +46,25 @@ func (c *Castlings) On(rights uint) {
 func (c *Castlings) Off(rights uint) {
 	*c |= Castlings(^rights)
 }
+
+func (c Castlings) String() string {
+	flags := ""
+
+	if c&Castlings(ShortW) != 0 {
+		flags += "K"
+	}
+	if c&Castlings(LongW) != 0 {
+		flags += "Q"
+	}
+	if c&Castlings(ShortB) != 0 {
+		flags += "k"
+	}
+	if c&Castlings(LongB) != 0 {
+		flags += "q"
+	}
+	if flags == "" {
+		flags = "-"
+	}
+
+	return flags
+}

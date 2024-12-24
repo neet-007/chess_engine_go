@@ -16,7 +16,7 @@ const (
 	NP       = 6
 	WHITE    = Color(0)
 	BLACK    = Color(1)
-	StartPos = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"
+	StartPos = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - "
 )
 
 const (
@@ -53,7 +53,8 @@ type Board struct {
 
 	Ep int
 	castlings.Castlings
-	Smt Color
+	Smt    Color
+	Rule50 int
 }
 
 func (b *Board) AllBB() Bitboard {
@@ -82,7 +83,7 @@ func (b *Board) Clear() {
 
 func (b *Board) NewGame() {
 	b.Clear()
-	ParseFEN(StartPos)
+	ParseFEN(b, StartPos)
 }
 
 func (b *Board) SetSq(p12, s int) {
@@ -102,8 +103,8 @@ func (b *Board) SetSq(p12, s int) {
 	p := piece(p12)
 	sd := p12Color(p12)
 
-	if p12 == King {
-		b.King[p] = s
+	if p == King {
+		b.King[sd] = s
 	}
 
 	b.WBBB[sd].Set(uint(s))
@@ -172,9 +173,9 @@ func (b *Board) Move(to, fr, pr int) bool {
 			if to-fr == 16 {
 				newEp = fr + 8
 			} else if to-fr == 7 {
-
+				b.SetSq(Empty, to+8)
 			} else if to-fr == 9 {
-
+				b.SetSq(Empty, to-8)
 			}
 		}
 	}
@@ -193,10 +194,119 @@ func (b *Board) Move(to, fr, pr int) bool {
 	return true
 }
 
-func ParseFEN(fen string) {
+func (b *Board) Print() {
+	fmt.Println()
+	txtStm := "BLACK"
+	if b.Smt == WHITE {
+		txtStm = "WHITE"
+	}
+	txtEp := "-"
+	if b.Ep != 0 {
+		txtEp = Sq2Fen[b.Ep]
+	}
+
+	fmt.Printf("%v to move; ep: %v  castling:%v  \n", txtStm, txtEp, b.Castlings.String())
+
+	fmt.Println("  +------+------+------+------+------+------+------+------+")
+	for lines := 8; lines > 0; lines-- {
+		fmt.Println("  |      |      |      |      |      |      |      |      |")
+		fmt.Printf("%v |", lines)
+		for ix := (lines - 1) * 8; ix < lines*8; ix++ {
+			fmt.Printf("   %v  |", Int2fen(b.Sq[ix]))
+		}
+		fmt.Println()
+		fmt.Println("  |      |      |      |      |      |      |      |      |")
+		fmt.Println("  +------+------+------+------+------+------+------+------+")
+	}
+
+	fmt.Printf("       A      B      C      D      E      F      G      H\n")
+}
+
+func (b *Board) PrintAllBB() {
+	txtStm := "BLACK"
+	if b.Smt == WHITE {
+		txtStm = "WHITE"
+	}
+	txtEp := "-"
+	if b.Ep != 0 {
+		txtEp = Sq2Fen[b.Ep]
+	}
+	fmt.Printf("%v to move; ep: %v   castling:%v\n", txtStm, txtEp, b.Castlings.String())
+
+	fmt.Println("white pieces")
+	fmt.Println(b.WBBB[WHITE].Stringln())
+	fmt.Println("black pieces")
+	fmt.Println(b.WBBB[BLACK].Stringln())
+
+	fmt.Println("wP")
+	fmt.Println((b.PiecesBB[Pawn] & b.WBBB[WHITE]).Stringln())
+	fmt.Println("wN")
+	fmt.Println((b.PiecesBB[Knight] & b.WBBB[WHITE]).Stringln())
+	fmt.Println("wB")
+	fmt.Println((b.PiecesBB[Bishop] & b.WBBB[WHITE]).Stringln())
+	fmt.Println("wR")
+	fmt.Println((b.PiecesBB[Rook] & b.WBBB[WHITE]).Stringln())
+	fmt.Println("wQ")
+	fmt.Println((b.PiecesBB[Queen] & b.WBBB[WHITE]).Stringln())
+	fmt.Println("wK")
+	fmt.Println((b.PiecesBB[King] & b.WBBB[WHITE]).Stringln())
+
+	fmt.Println("bP")
+	fmt.Println((b.PiecesBB[Pawn] & b.WBBB[BLACK]).Stringln())
+	fmt.Println("bN")
+	fmt.Println((b.PiecesBB[Knight] & b.WBBB[BLACK]).Stringln())
+	fmt.Println("bB")
+	fmt.Println((b.PiecesBB[Bishop] & b.WBBB[BLACK]).Stringln())
+	fmt.Println("bR")
+	fmt.Println((b.PiecesBB[Rook] & b.WBBB[BLACK]).Stringln())
+	fmt.Println("bQ")
+	fmt.Println((b.PiecesBB[Queen] & b.WBBB[BLACK]).Stringln())
+	fmt.Println("bK")
+	fmt.Println((b.PiecesBB[King] & b.WBBB[BLACK]).Stringln())
+}
+
+func Int2fen(fenInt int) string {
+	switch fenInt {
+	case Empty:
+		return ""
+	case WP:
+		return "P"
+	case BP:
+		return "p"
+	case WK:
+		return "K"
+	case BK:
+		return "k"
+	case WB:
+		return "B"
+	case BB:
+		return "b"
+	case WR:
+		return "R"
+	case BR:
+		return "r"
+	case WN:
+		return "N"
+	case BN:
+		return "n"
+	case WQ:
+		return "Q"
+	case BQ:
+		return "q"
+	default:
+		panic("invalid fen int")
+	}
+}
+
+func ParseFEN(b *Board, fen string) {
+	if b == nil {
+		fmt.Println("board is nil")
+		return
+	}
 	fenIx := 0
 	sq := 0
 
+	fen = strings.TrimSpace(fen)
 	for row := 7; row >= 0; row-- {
 		for sq = row * 8; sq < row*8+8; {
 
@@ -208,14 +318,19 @@ func ParseFEN(fen string) {
 			}
 
 			if i, err := strconv.Atoi(char); err == nil {
-				fmt.Println(i, "empty from sq", sq)
-				sq += i
+				for j := 0; j < i; j++ {
+					b.SetSq(Empty, sq)
+					sq++
+				}
 				continue
 			}
-			fmt.Println(char, " at sq ", sq)
+			if strings.IndexAny(P12ToFen, char) == -1 {
+				shared.Tell("info string invalid piece ", char, " try next one")
+				continue
+			}
 
 			// TODO: set the square on the board
-			//b.SetSq(Fen2Sq[char], sq)
+			b.SetSq(fen2pc(char), sq)
 
 			sq++
 		}
@@ -226,34 +341,39 @@ func ParseFEN(fen string) {
 	if len(remaining) > 0 {
 		if remaining[0] == "w" {
 			// TODO: make to move white
+			b.Smt = WHITE
 		} else if remaining[0] == "b" {
 			// TODO: make to move black
+			b.Smt = BLACK
 		} else {
 			r := fmt.Sprintf("%s sq=%d fenIx=%d\n", strings.Join(remaining, " "), sq, fenIx)
 
 			shared.Tell("parse fen remaingin ", r, "\n")
 			shared.Tell("parse fen ", remaining[0], "invalid smt")
 			// TODO: reset to move to white
+			b.Smt = WHITE
 		}
 
 	}
 
 	// TODO: reset board castlings
+	b.Castlings = 0
 	if len(remaining) > 1 {
-		_ = castlings.ParseCastlings(remaining[1])
+		b.Castlings = castlings.ParseCastlings(remaining[1])
 	}
 
 	// TODO: reset es passent
+	b.Ep = 0
 	if len(remaining) > 2 {
 		if remaining[2] != "-" {
 			// TODO: set es passent on board
-			_ = Fen2Sq[remaining[2]]
+			b.Ep = Fen2Sq[remaining[2]]
 		}
 	}
 
 	// TODO: reset the 50 rule
 	if len(remaining) > 3 {
-		_ = parse50(remaining[3])
+		b.Rule50 = parse50(remaining[3])
 	}
 }
 
@@ -309,6 +429,14 @@ func ParseMvs(moves string) {
 	// TODO: make board move method
 }
 
+func fen2pc(c string) int {
+	for p, x := range P12ToFen {
+		if string(x) == c {
+			return p
+		}
+	}
+	return Empty
+}
 func piece(p12 int) int {
 	return p12 >> 1
 }
