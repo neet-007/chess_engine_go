@@ -38,3 +38,11 @@ func ParseCastlings(fenCast string) Castlings {
 
 	return Castlings(c)
 }
+
+func (c *Castlings) On(rights uint) {
+	*c |= Castlings(rights)
+}
+
+func (c *Castlings) Off(rights uint) {
+	*c |= Castlings(^rights)
+}

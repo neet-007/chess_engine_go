@@ -110,6 +110,89 @@ func (b *Board) SetSq(p12, s int) {
 	b.PiecesBB[p].Set(uint(s))
 }
 
+func (b *Board) Move(to, fr, pr int) bool {
+	p12 := b.Sq[fr]
+
+	newEp := 0
+	switch {
+	case p12 == WK && b.Castlings != 0:
+		{
+			b.Castlings.Off(castlings.ShortW | castlings.LongW)
+			if fr == E1 {
+				if to == G1 {
+					b.SetSq(WR, F1)
+					b.SetSq(Empty, G1)
+				} else {
+					b.SetSq(WR, D1)
+					b.SetSq(Empty, A1)
+				}
+			}
+		}
+	case p12 == BK && b.Castlings != 0:
+		{
+			b.Castlings.Off(castlings.ShortB | castlings.LongB)
+			if fr == E8 {
+				if to == G8 {
+					b.SetSq(WR, F8)
+					b.SetSq(Empty, G8)
+				} else {
+					b.SetSq(WR, D8)
+					b.SetSq(Empty, A8)
+				}
+			}
+		}
+	case p12 == WR && b.Castlings != 0:
+		{
+			if fr == F1 {
+				b.Castlings.Off(castlings.LongW)
+			} else if fr == H1 {
+				b.Castlings.Off(castlings.ShortW)
+			}
+		}
+	case p12 == BR && b.Castlings != 0:
+		{
+			if fr == F8 {
+				b.Castlings.Off(castlings.LongW)
+			} else if fr == H8 {
+				b.Castlings.Off(castlings.ShortW)
+			}
+		}
+	case p12 == WP && b.Sq[to] == Empty:
+		{
+			if to-fr == 16 {
+				newEp = fr + 8
+			} else if to-fr == 7 {
+				b.SetSq(Empty, to+8)
+			} else if to-fr == 9 {
+				b.SetSq(Empty, to-8)
+			}
+		}
+	case p12 == BP && b.Sq[to] == Empty:
+		{
+			if to-fr == 16 {
+				newEp = fr + 8
+			} else if to-fr == 7 {
+
+			} else if to-fr == 9 {
+
+			}
+		}
+	}
+	b.Ep = newEp
+	b.Sq[fr] = Empty
+
+	if pr != Empty {
+		b.SetSq(pr, to)
+	} else {
+		b.SetSq(p12, to)
+	}
+
+	b.Smt = b.Smt ^ 0x1
+	// TODO: check if in check to return false
+
+	return true
+}
+
 func ParseFEN(fen string) {
 	fenIx := 0
 	sq := 0
